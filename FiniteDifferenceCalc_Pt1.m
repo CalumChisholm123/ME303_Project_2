@@ -1,21 +1,21 @@
-% Corrected egg cooking simulation using spherical heat equation
+%% Egg Simulation 
 clear; clc;
 
 % Material properties (corrected units)
 density = 1009.62; % kg/m³
-specific_heat = 498; % J/(kg·K) - converted from kJ to J
+specific_heat = 498; % J/(kg·K)
 k = 3.163; % W/(m·K)
 alpha = k/(density * specific_heat); % Thermal diffusivity [m²/s]
 
 fprintf('Thermal diffusivity: %.2e m²/s\n', alpha);
 
 % Geometry
-r_max = 0.044; % Maximum radius (m) - about 4.4 cm
+r_max = 0.044; % Maximum radius (m) 
 N = 100; % Spatial grid points
 dr = r_max / N; % Spatial step
 
-% Time parameters - much longer simulation time
-dt = 0.01; % Time step (s) - adjusted for stability
+% Time parameters 
+dt = 0.01; % Time step (s) 
 t_max = 600; % Total time (s) - 10 minutes
 Nt = round(t_max/dt);
 
@@ -44,7 +44,6 @@ T_history = zeros(Nt+1, N);
 T_history(1, :) = T;
 time_vec = 0:dt:(Nt*dt);
 
-fprintf('Starting simulation...\n');
 
 % Time stepping
 cooked = false;
@@ -85,11 +84,6 @@ for n = 1:Nt
     % Store temperature history
     T_history(n+1, :) = T;
     
-    % Progress update
-    if mod(n, round(Nt/10)) == 0
-        fprintf('Progress: %.0f%%, Center temp: %.1f°C\n', ...
-                100*n/Nt, T(1));
-    end
 end
 
 % Final results
@@ -134,7 +128,7 @@ grid on;
 yline(T_cooked, 'k--', 'Cooking Temperature');
 
 % Animation (optional)
-create_animation = false; % Set to true if you want animation
+create_animation = true; % Set to true if you want animation
 if create_animation
     figure(2);
     for i = 1:10:length(time_vec)
