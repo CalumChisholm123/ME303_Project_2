@@ -1,85 +1,62 @@
-%% Finite Difference Method to solve the egg
-clc;clear;close
 
-%% Parameters 
-R = 0.0225; % Radius of Egg
-T_final = 200; %Total time in seconds 
-k = 3.163;
-density = 1070.9;
-specific_heat = 0.498;
+density = 1009.62; %kg/m^3
+specific_heat = 498; %J/kgK
+k = 3.163; % W/(mK)
+alpha = k/(density * specific_heat);       % Thermal diffusivity
 
-alpha = k/(density*specific_heat); % Thermal diffusivity constant 
-T_inital =5; % Inital temperature of the egg 
-T_surface = 100; % Surface temperature of the egg in boiling water 
+fprintf('Thermal diffusivity: %.2e m²/s\n', alpha);
 
-%% Discretization 
-Nr = 20; % Number of Spatial grid points 
-Nt = 5000; % Number of time steps
-dr = R/Nr; %Spatial step size 
-dt = T_final/Nt; %Time step size 
-r = linspace(0,R,Nr+1); % Radial grid 
-t = linspace(0,T_final,Nt+1); % Time grid 
+r_max = 0.044;       % Maximum radius
+N = 100;           % Spatial grid points
+dr = r_max / N;    % Spatial step
+dt = 0.0001;       % Time step
+t_max = 600;       % Total time
 
-%% Stability Check
-stability_factor = alpha * dt / dr^2;
-fprintf('Stability factor is', stability_factor);
-if stability_factor > 0.5
-    warning('Solution may be unstable.');
-end
+% Spatial grid (avoid r=0)
+r = linspace(dr, r_max, N);  
 
-%% Initalize Solution Matrix 
-U = zeros(Nr+1,Nt+1);
-U(1:Nr,1) = T_inital; % Inital conditions
-U(Nr+1,:) = T_surface; % Boundary condition 
+% Initial condition
+T0 = 5;  
+T = T0 * ones(1, N); 
 
-for n = 1:Nt % Loop through time
-    for i = 2:Nr 
-        d2U_dr2 = (U(i+1, n) - 2*U(i, n) + U(i-1, n)) / dr^2;
-        dU_dr = (2 / r(i)) * (U(i+1, n) - U(i-1, n)) / (2 * dr);
+cooked = false;
+cook_time = 0;
+T_cooked = 80;
+
+M = length(r);
+T_new = zeros(1, M);
+
+for t = 0:dt:t_max % Time loop 
+    
+    for i = 2:M-1
+        d2T_dr2 = (T(i+1) - 2*T(i) + T(i-1)) / dr^2; % 2nd order central difference 
+        dT_dr = (T(i+1) - T(i-1)) / (2 * dr); % 1st order central difference 
+        T_new(i) = T(i) + dt * alpha * (d2T_dr2 + (2/r(i)) * dT_dr); % Computing new Temperature 
         
-        U(i, n+1) = U(i, n) + alpha * dt * (d2U_dr2 + dU_dr);
+    % Check if egg is cooked (center reaches 80°C)
+    if ~cooked && T_new(1) >= T_cooked
+        cooked = true;
+        cook_time = t * dt;
+        fprintf('Egg is cooked! Time: %.1f seconds (%.1f minutes)\n', ...
+                cook_time, cook_time/60);
+        fprintf('Center temperature: %.1f°C\n', T_new(1));
     end
+
+
+    end
+    
+    % Boundary conditions
+    T_new(1) = T_new(2);       % Symmetry at r=0 (Neumann)
+    T_new(M) = 100;              % Fixed temperature at r=r_max (Dirichlet)
+    
+    T = T_new;
 end
 
-
-%% Check for "Cooked Egg" Criterion
-T_center_history = U(1, :); 
-T_cooked = 80; % Your criterion for a cooked yolk
-
-cooked_time_index = find(T_center_history >= T_cooked, 1, 'first');
-
-if ~isempty(cooked_time_index)
-    cooked_time_seconds = t(cooked_time_index);
-    fprintf('Success! The egg center reaches %d°C at %.1f seconds (%.2f minutes).\n', ...
-            T_cooked, cooked_time_seconds, cooked_time_seconds/60);
-else
-    fprintf('The egg center did not reach %d°C within the simulated time of %.1f minutes.\n', ...
-            T_cooked, T_final/60);
-end
-
-%% Plotting the Results
-
-% 3D Surface Plot
-figure;
-surf(r, t, U', 'EdgeColor', 'none');
-colorbar;
-xlabel('Radius (r) [m]');
-ylabel('Time (t) [s]');
-zlabel('Temperature (°C)');
-title('Temperature Distribution in Egg vs. Time');
-view(60, 30); % Adjust view angle
-
-% 2D Plot of Temperature Profiles
-figure;
-hold on;
-% Select 6 evenly spaced time points to plot
-plot_indices = round(linspace(1, Nt+1, 6)); 
-for idx = plot_indices
-    plot(r, U(:, idx), 'LineWidth', 1.5, 'DisplayName', sprintf('t = %.0f s', t(idx)));
-end
-hold off;
+% Plot
+Initial_Profile = T0 * ones(1, N);
+plot(r, Initial_Profile, 'k--', r, T, 'r-', 'LineWidth', 2);
+xlabel('Radius (r)');
+ylabel('Temperature (T)');
+legend('Initial', 'Final');
+title('Forward Euler Solution of Spherical Heat Equation');
 grid on;
-xlabel('Radius (r) [m]');
-ylabel('Temperature (°C)');
-title('Temperature Profile at Different Times');
-legend;
