@@ -1,10 +1,10 @@
 % Simple egg cooking simulation - Time vs Center Temperature
 clear; clc;
 
-% Material properties
-density = 1009.62; % kg/m³
-specific_heat = 498; % J/(kg·K)
-k = 3.163; % W/(m·K)
+% Material properties of Chicken Egg
+density = 1175.04; % kg/m³
+specific_heat = 3026.05; % J/(kg·K)
+k = 0.498; % W/(m·K)
 alpha = k/(density * specific_heat); % Thermal diffusivity
 
 % Geometry
@@ -14,7 +14,7 @@ dr = r_max / N;
 
 % Time parameters
 dt = 0.01; % Time step (s)
-t_max = 600; % Total time (s) - 10 minutes
+t_max = 9000; % Total time (s) - 15 minutes
 Nt = round(t_max/dt);
 
 % Spatial grid
