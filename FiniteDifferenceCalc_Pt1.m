@@ -31,12 +31,11 @@ center_temp = zeros(Nt+1, 1);
 time_vec = (0:Nt) * dt / 60; % Convert to minutes
 center_temp(1) = T(1);
 
-fprintf('Simulating egg cooking...\n');
-fprintf('Initial center temperature: %.1f°C\n', T(1));
 
-% Time stepping
+
 cooked = false;
-for n = 1:Nt
+
+for n = 1:Nt % Time stepping
     T_old = T;
     
     % Interior points
@@ -59,11 +58,7 @@ for n = 1:Nt
         fprintf('Egg is cooked at %.1f minutes! Center temp: %.1f°C\n', ...
                 n*dt/60, T(1));
     end
-    
-    % Progress update every minute
-    if mod(n*dt, 60) == 0
-        fprintf('Time: %.0f min, Center temp: %.1f°C\n', n*dt/60, T(1));
-    end
+
 end
 
 % Plot results
