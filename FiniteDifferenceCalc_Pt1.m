@@ -1,143 +1,103 @@
-%% Egg Simulation 
+% Simple egg cooking simulation - Time vs Center Temperature
 clear; clc;
 
-% Material properties (corrected units)
+% Material properties
 density = 1009.62; % kg/m³
 specific_heat = 498; % J/(kg·K)
 k = 3.163; % W/(m·K)
-alpha = k/(density * specific_heat); % Thermal diffusivity [m²/s]
-
-fprintf('Thermal diffusivity: %.2e m²/s\n', alpha);
+alpha = k/(density * specific_heat); % Thermal diffusivity
 
 % Geometry
-r_max = 0.044; % Maximum radius (m) 
-N = 100; % Spatial grid points
-dr = r_max / N; % Spatial step
+r_max = 0.044; % Maximum radius (m)
+N = 50; % Spatial grid points (reduced for speed)
+dr = r_max / N;
 
-% Time parameters 
-dt = 0.01; % Time step (s) 
+% Time parameters
+dt = 0.01; % Time step (s)
 t_max = 600; % Total time (s) - 10 minutes
 Nt = round(t_max/dt);
 
-% Check stability (Courant number should be < 0.5 for stability)
-courant = alpha * dt / dr^2;
-fprintf('Courant number: %.4f (should be < 0.5)\n', courant);
-
-if courant >= 0.5
-    warning('Time step may be too large for stability!');
-    dt = 0.4 * dr^2 / alpha; % Adjust for stability
-    fprintf('Adjusted time step: %.4f s\n', dt);
-    Nt = round(t_max/dt);
-end
-
-% Spatial grid (avoid r=0)
+% Spatial grid
 r = linspace(dr, r_max, N);
 
 % Initial condition
 T0 = 5; % Initial temperature (°C)
 T = T0 * ones(1, N);
-T_boiling_water = 100; % Boiling water temperature (°C)
-T_cooked = 80; % Temperature when egg is considered cooked (°C)
+T_boiling_water = 100; % Surface temperature
+T_cooked = 80; % Cooking temperature
 
-% Storage for animation/plotting
-T_history = zeros(Nt+1, N);
-T_history(1, :) = T;
-time_vec = 0:dt:(Nt*dt);
+% Storage for center temperature vs time
+center_temp = zeros(Nt+1, 1);
+time_vec = (0:Nt) * dt / 60; % Convert to minutes
+center_temp(1) = T(1);
 
+fprintf('Simulating egg cooking...\n');
+fprintf('Initial center temperature: %.1f°C\n', T(1));
 
 % Time stepping
 cooked = false;
-cook_time = 0;
-
-fprintf('Initial center temperature: %.1f°C\n', T(1));
-
 for n = 1:Nt
-    T_old = T; % Store current temperature
+    T_old = T;
     
-    % Update interior points (i = 2 to N-1)
+    % Interior points
     for i = 2:N-1
         d2T_dr2 = (T_old(i+1) - 2*T_old(i) + T_old(i-1)) / dr^2;
         dT_dr = (T_old(i+1) - T_old(i-1)) / (2 * dr);
         T(i) = T_old(i) + dt * alpha * (d2T_dr2 + (2/r(i)) * dT_dr);
     end
     
-    % Boundary condition at center (i=1): symmetry dT/dr = 0
-    % Use the heat equation at r = dr with the symmetry condition
-    % At r=dr, dT/dr ≈ (T(2) - T(0))/2dr = (T(2) - T(1))/2dr = 0 (by symmetry)
-    % This gives us T(0) = T(2), but we're at i=1 which represents r=dr
-    % So we use: d²T/dr² = (T(2) - 2*T(1) + T(0))/dr² = (T(2) - 2*T(1) + T(2))/dr² = 2*(T(2) - T(1))/dr²
-    d2T_dr2_center = 2 * (T_old(2) - T_old(1)) / dr^2;
-    T(1) = T_old(1) + dt * alpha * d2T_dr2_center;
+    % Boundary conditions
+    T(1) = T_old(1) + dt * alpha * 2 * (T_old(2) - T_old(1)) / dr^2; % Center
+    T(N) = T_boiling_water; % Surface
     
-    % Boundary condition at surface (i=N): fixed temperature
-    T(N) = T_boiling_water;
+    % Store center temperature
+    center_temp(n+1) = T(1);
     
-    % Check if egg is cooked (center reaches 80°C)
+    % Check if cooked
     if ~cooked && T(1) >= T_cooked
         cooked = true;
-        cook_time = n * dt;
-        fprintf('Egg is cooked! Time: %.1f seconds (%.1f minutes)\n', ...
-                cook_time, cook_time/60);
-        fprintf('Center temperature: %.1f°C\n', T(1));
+        fprintf('Egg is cooked at %.1f minutes! Center temp: %.1f°C\n', ...
+                n*dt/60, T(1));
     end
     
-    % Store temperature history
-    T_history(n+1, :) = T;
-    
+    % Progress update every minute
+    if mod(n*dt, 60) == 0
+        fprintf('Time: %.0f min, Center temp: %.1f°C\n', n*dt/60, T(1));
+    end
 end
 
-% Final results
-fprintf('\nSimulation complete!\n');
-fprintf('Final center temperature: %.1f°C\n', T(1));
+% Plot results
+figure;
+plot(time_vec, center_temp, 'r-', 'LineWidth', 2);
+hold on;
+yline(T_cooked, 'k--', 'LineWidth', 1.5, 'Label', 'Cooking Temperature (80°C)');
+yline(T0, 'b--', 'LineWidth', 1, 'Label', 'Initial Temperature (5°C)');
+
+xlabel('Time (minutes)');
+ylabel('Center Temperature (°C)');
+title('Egg Cooking Progress - Center Temperature vs Time');
+grid on;
+xlim([0, t_max/60]);
+ylim([0, 105]);
+
+% Mark cooking point if reached
 if cooked
-    fprintf('Egg cooked in %.1f minutes\n', cook_time/60);
+    cook_idx = find(center_temp >= T_cooked, 1);
+    cook_time_min = time_vec(cook_idx);
+    plot(cook_time_min, T_cooked, 'go', 'MarkerSize', 10, 'MarkerFaceColor', 'g');
+    text(cook_time_min + 0.5, T_cooked + 5, ...
+         sprintf('Cooked!\n%.1f min', cook_time_min), ...
+         'FontSize', 12, 'Color', 'green');
+end
+
+legend('Center Temperature', 'Location', 'southeast');
+
+% Final summary
+fprintf('\nSimulation complete!\n');
+fprintf('Final center temperature: %.1f°C\n', center_temp(end));
+if cooked
+    cook_time_final = time_vec(find(center_temp >= T_cooked, 1));
+    fprintf('Egg cooked in %.1f minutes\n', cook_time_final);
 else
     fprintf('Egg not fully cooked after %.1f minutes\n', t_max/60);
-end
-
-% Plotting
-figure(1);
-subplot(2,1,1);
-plot(r*1000, T_history(1,:), 'b--', 'LineWidth', 2); hold on;
-plot(r*1000, T_history(end,:), 'r-', 'LineWidth', 2);
-if cooked
-    cook_idx = round(cook_time/dt) + 1;
-    plot(r*1000, T_history(cook_idx,:), 'g-', 'LineWidth', 2);
-    legend('Initial', 'Final', sprintf('Cooked (%.1f min)', cook_time/60), 'Location', 'best');
-else
-    legend('Initial', 'Final', 'Location', 'best');
-end
-xlabel('Radius (mm)');
-ylabel('Temperature (°C)');
-title('Temperature Profile in Spherical Egg');
-grid on;
-ylim([0 105]);
-
-subplot(2,1,2);
-plot(time_vec/60, T_history(:,1), 'r-', 'LineWidth', 2); hold on;
-plot(time_vec/60, T_history(:,round(N/2)), 'g-', 'LineWidth', 2);
-plot(time_vec/60, T_history(:,end), 'b-', 'LineWidth', 2);
-if cooked
-    plot(cook_time/60, T_cooked, 'ko', 'MarkerSize', 8, 'MarkerFaceColor', 'k');
-end
-xlabel('Time (minutes)');
-ylabel('Temperature (°C)');
-legend('Center', 'Midpoint', 'Surface', 'Cooked point', 'Location', 'best');
-title('Temperature vs Time at Different Positions');
-grid on;
-yline(T_cooked, 'k--', 'Cooking Temperature');
-
-% Animation (optional)
-create_animation = true; % Set to true if you want animation
-if create_animation
-    figure(2);
-    for i = 1:10:length(time_vec)
-        plot(r*1000, T_history(i,:), 'r-', 'LineWidth', 2);
-        xlabel('Radius (mm)');
-        ylabel('Temperature (°C)');
-        title(sprintf('Temperature Profile at t = %.1f min', time_vec(i)/60));
-        ylim([0 105]);
-        grid on;
-        pause(0.1);
-    end
 end
