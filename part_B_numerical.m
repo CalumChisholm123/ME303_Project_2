@@ -36,7 +36,7 @@ plot(x_span, u(t_span == 10,:), 'DisplayName', 't = 10s')
 hold on
 xlabel('X position')
 ylabel('u(x,t)')
-title('Temperature distribution in a 1D bar')
+title('Numerical Solution of Temperature vs Position')
 legend
 grid on
 
