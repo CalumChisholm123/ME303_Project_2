@@ -2,19 +2,19 @@
 clear; clc; close;
 
 % Material properties of Chicken Egg
-density = 1070.9; % kg/m³
-specific_heat = 3163; % J/(kg·K)
-k = 0.498; % W/(m·K)
+density = 1150; % kg/m³
+specific_heat = 3397; % J/(kg·K)
+k = 0.535; % W/(m·K)
 alpha = k/(density * specific_heat); % Thermal diffusivity
 
 % Geometry
-r_max = 0.022; % Maximum radius (m)
+r_max = 0.12954/2; % Maximum radius (m)
 N = 50; % Spatial grid points (reduced for speed)
 dr = r_max / N;
 
 % Time parameters
 dt = 0.01; % Time step (s)
-t_max = 9000; % Total time (s) - 15 minutes
+t_max = 9000; % Total time 
 Nt = round(t_max/dt);
 
 % Spatial grid
@@ -28,12 +28,12 @@ T_cooked = 80; % Cooking temperature
 
 % Storage for center temperature vs time
 center_temp = zeros(Nt+1, 1);
-time_vec = (0:Nt) * dt / 60; % Convert to minutes
+time_vec = (0:Nt) * dt / 60; % 
 center_temp(1) = T(1);
 
-
-
 cooked = false;
+cooked_duration = 0;  % Time egg is cooked 
+required_cooked_time = 10;  % 10 seconds
 
 for n = 1:Nt % Time stepping
     T_old = T;
@@ -49,50 +49,63 @@ for n = 1:Nt % Time stepping
     T(1) = T_old(1) + dt * alpha * 2 * (T_old(2) - T_old(1)) / dr^2; % Center
     T(N) = T_boiling_water; % Surface
     
-    % Store center temperature
     center_temp(n+1) = T(1);
     
-    % Check if cooked
-    if ~cooked && T(1) >= T_cooked
-        cooked = true;
-        fprintf('Egg is cooked at %.1f minutes! Center temp: %.1f°C\n', ...
-                n*dt/60, T(1));
-    end
+    % Check if cooked 
+    if T(1) >= T_cooked
+        if ~cooked
+            % Reached 80 degrees Celcius 
+            cooked = true;
+            cooked_start_time = n * dt;
+        end
 
+        cooked_duration = (n * dt) - cooked_start_time;
+    else
+        % Temperature dropped below threshold, reset cooking
+        cooked = false;
+        cooked_duration = 0;
+    end
+    
+    % Check if cooked for required time
+    if cooked && cooked_duration >= required_cooked_time
+        fprintf('Egg has been cooked. Center temp: %.1f°C\n', T(1));
+    end
 end
 
-% Plot results
+if cooked_duration < required_cooked_time
+    fprintf('Egg was not cooked for at least 10 seconds');
+end
+
+% Plotting
 figure;
-plot(time_vec, center_temp, 'r-', 'LineWidth', 2);
+plot(time_vec, center_temp, 'r-', 'LineWidth', 1);
 hold on;
-yline(T_cooked, 'k--', 'LineWidth', 1.5, 'Label', 'Cooking Temperature (80°C)');
-yline(T0, 'b--', 'LineWidth', 1, 'Label', 'Initial Temperature (5°C)');
+yline(T_cooked, 'k--', 'LineWidth', 1);
+yline(T0, 'b--', 'LineWidth', 1);
 
 xlabel('Time (minutes)');
 ylabel('Center Temperature (°C)');
-title('Egg Cooking Progress - Center Temperature vs Time');
+title('Ostrich Egg Center Temperature vs Time');
 grid on;
 xlim([0, t_max/60]);
 ylim([0, 105]);
 
-% Mark cooking point if reached
+% Highlight cooked point on graph 
 if cooked
     cook_idx = find(center_temp >= T_cooked, 1);
     cook_time_min = time_vec(cook_idx);
-    plot(cook_time_min, T_cooked, 'go', 'MarkerSize', 10, 'MarkerFaceColor', 'g');
+    plot(cook_time_min, T_cooked, 'go', 'MarkerSize', 5);
     text(cook_time_min + 0.5, T_cooked + 5, ...
-         sprintf('Cooked!\n%.1f min', cook_time_min), ...
-         'FontSize', 12, 'Color', 'green');
+         sprintf('Fully Cooked:\n%.1f min', cook_time_min));
 end
 
-legend('Center Temperature', 'Location', 'southeast');
+legend('Center Temperature', 'Location', 'northwest');
 
-% Final summary
-fprintf('\nSimulation complete!\n');
-fprintf('Final center temperature: %.1f°C\n', center_temp(end));
+% Cooked output 
+fprintf('Final  temperature of center of egg is: %.1f°C\n', center_temp(end));
 if cooked
     cook_time_final = time_vec(find(center_temp >= T_cooked, 1));
     fprintf('Egg cooked in %.1f minutes\n', cook_time_final);
 else
-    fprintf('Egg not fully cooked after %.1f minutes\n', t_max/60);
+    fprintf('Egg was not cooked after %.1f minutes\n', t_max/60);
 end
