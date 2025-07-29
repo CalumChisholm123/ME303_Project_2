@@ -9,8 +9,8 @@ N=10;
 M=50;
 % dx=L/N;
 % dt=T/M;
-dx = .1
-dt = 0.0001
+dx = .1;
+dt = .001;
 N=L/dx;
 M=T/dt;
 
