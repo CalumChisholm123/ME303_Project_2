@@ -1,7 +1,7 @@
 % Simple egg cooking simulation - Time vs Center Temperature
 clear; clc; close;
 
-% Material properties of Chicken Egg
+% Material properties of Egg
 density = 1150; % kg/m³
 specific_heat = 3397; % J/(kg·K)
 k = 0.535; % W/(m·K)
@@ -89,15 +89,6 @@ title('Ostrich Egg Center Temperature vs Time');
 grid on;
 xlim([0, t_max/60]);
 ylim([0, 105]);
-
-% Highlight cooked point on graph 
-if cooked
-    cook_idx = find(center_temp >= T_cooked, 1);
-    cook_time_min = time_vec(cook_idx);
-    plot(cook_time_min, T_cooked, 'go', 'MarkerSize', 5);
-    text(cook_time_min + 0.5, T_cooked + 5, ...
-         sprintf('Fully Cooked:\n%.1f min', cook_time_min));
-end
 
 legend('Center Temperature', 'Location', 'northwest');
 
